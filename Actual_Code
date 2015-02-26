@@ -1,0 +1,1095 @@
+from decimal import Decimal
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import numpy as np
+import math as math
+
+def erplotter(a, b, c, d, era, erb, erc, erd):
+	n_groups = 6
+	indexgr = np.arange(n_groups)
+	plt.errorbar(indexgr, a, yerr=era, fmt='bo')
+	plt.errorbar(indexgr, b, yerr=erb, fmt='ro')
+	plt.errorbar(indexgr, c, yerr=erc, fmt='yo')
+	plt.errorbar(indexgr, d, yerr=erd, fmt='go')
+	
+	so1, = plt.plot(indexgr, a, 'bo', label='Data from Figure 1')
+	so2, = plt.plot(indexgr, b, 'ro', label='Data from Figure 2')
+	so3, = plt.plot(indexgr, c, 'yo', label='Data from Figure 3')
+	so4, = plt.plot(indexgr, d, 'go', label='Data from Figure 4')
+	plt.legend(loc='upper left')
+
+	plt.xticks(indexgr, ('r', 'i', 'Z', 'Y', 'J', 'H'))
+	plt.show()
+	
+	
+
+def stanerr(x):
+	insi = (np.power(x, 2).sum())/len(x)
+	stander = math.sqrt(insi)
+	return (stander)
+
+def linfit(x,y,dy=[],slope_prior=0.0,slope_prior_err=0.0):
+    """
+    m = a+b*x
+    minimize chi^2 = Sum (y-m)^2/dy^2
+
+    returns: (a,b,covariance_matrix)
+
+      covariance_matrix[0][0]^(1/2) is the error on a
+      covariance_matrix[1][1]^(1/2) is the error on b
+    """
+    lx=len(x)
+
+    if (lx==0): return (0,0,[[0,0],[0,0]])
+    if (lx==1): return (y.mean(),0,[[0,0],[0,0]])
+
+    if (dy==[]):
+        dy = np.ones(lx,dtype='float32')
+
+    wt = 1./np.power(dy, 2)
+    ss = wt.sum()
+    sx = (wt * x).sum()
+    sy = (wt * y).sum()
+    t =  (x - sx/ss) / dy
+    b = (t * y / dy).sum()
+
+    st2 = (t*t).sum()
+
+    # parameter estimates
+    if (st2>0):
+        b /= st2
+        if (slope_prior_err>0):
+            b = ( b + slope_prior/(st2*slope_prior_err**2) ) / ( 1. + 1./(st2*slope_prior_err**2) )
+    else: b=0.0
+    a = (sy - sx * b) / ss
+
+    # error estimates
+    svara,svarb,covar=1./ss,0.,0.
+    if (st2>0):
+        svarb = 1. / st2
+        covar = -sx/(ss*st2)
+        svara = (1. + sx * sx / (ss * st2)) / ss
+        
+	covar = [[svara, covar], [covar, svarb]]
+	xcon = 0
+	m = []
+	while xcon < len(x):
+		mw = a + (b*x[xcon])
+		m.append(mw)
+		xcon += 1
+	ycon = 0
+	minchi = 0  
+	while ycon < len(y):
+		mintemp = np.power((y[ycon]-m[ycon]), 2)/np.power(dy[ycon], 2)
+		minchi = minchi + mintemp
+		ycon += 1
+
+    return (a,b,minchi,covar)
+
+def linreg(xax, yax, xax2, yax2, xax3, yax3, xax4, yax4):			
+			worl = raw_input('Would you like it to be weighted?(Y/N)\n')
+			#figure1
+			fli = []
+			flgrph = []
+			tt = 0
+			tw = 0
+			while tt < len(yax):
+				fli.append(float(yax[tt]))
+				tt += 1
+			while tw < len(xax):
+				flgrph.append(float(xax[tw]))
+				tw += 1
+			regression = np.polyfit(flgrph, fli, 1)
+			slopeval = regression[0]
+			bval = regression[1]
+			
+			#graph
+			otvals = []
+			uncery = []
+			cn = 0
+			while cn < len(xax):
+				cm = (slopeval * xax[cn]) + bval
+				otvals.append(cm)
+				cp = float(yax[cn]) - float(cm)
+				uncery.append(abs(cp))
+				cn += 1
+			if worl == 'N':
+				plt.figure(1)
+				plt.plot(xax, otvals)
+				plt.plot(xax, yax, 'ro')
+				plt.show()
+			else:
+				at, bt, mchi, covar = linfit(flgrph, fli, uncery)
+				wfvals = []
+				cq = 0
+				ervals = []
+				while cq < len(xax):
+					cu = (bt * xax[cq]) + at
+					wfvals.append(cu)
+					cb = float(yax[cq]) - float(cu)
+					ervals.append(abs(cb))
+					cq += 1
+				vartester = np.power(covar[1][1],.5)
+				plt.figure(1)
+				plt.plot(xax, wfvals)
+				plt.plot(xax, yax, 'ro')
+				plt.show()
+			
+			#figure2
+			fli2 = []
+			flgrph2 = []
+			tt2 = 0
+			tw2 = 0
+			while tt2 < len(yax2):
+				fli2.append(float(yax2[tt2]))
+				tt2 += 1
+			while tw2 < len(xax2):
+				flgrph2.append(float(xax2[tw2]))
+				tw2 += 1
+			regression2 = np.polyfit(flgrph2, fli2, 1)
+			slopeval2 = regression2[0]
+			bval2 = regression2[1]
+			#graph
+			otvals2 = []
+			uncery2 = []
+			cn2 = 0
+			while cn2 < len(xax2):
+				cm2 = (slopeval2 * xax2[cn2]) + bval2
+				otvals2.append(cm2)
+				cp2 = float(yax2[cn2]) - float(cm2)
+				uncery2.append(abs(cp2))
+				cn2 += 1
+			if worl == 'N':
+				plt.figure(2)
+				plt.plot(xax2, otvals2)
+				plt.plot(xax2, yax2, 'ro')
+				plt.show()
+			else:
+				at2, bt2, mchi2, covar2 = linfit(flgrph2, fli2, uncery2)
+				wfvals2 = []
+				cq2 = 0
+				ervals2 = []
+				while cq2 < len(xax2):
+					cu2 = (bt2 * xax2[cq2]) + at2
+					wfvals2.append(cu2)
+					cb2 = float(yax2[cq2]) - float(cu2)
+					ervals2.append(abs(cb2))
+					cq2 += 1
+				vartester2 = np.power(covar2[1][1],.5)
+				plt.figure(2)
+				plt.plot(xax2, wfvals2)
+				plt.plot(xax2, yax2, 'ro')
+				plt.show()
+			
+			#figure3
+			fli3 = []
+			flgrph3 = []
+			tt3 = 0
+			tw3 = 0
+			while tt3 < len(yax3):
+				fli3.append(float(yax3[tt3]))
+				tt3 += 1
+			while tw3 < len(xax3):
+				flgrph3.append(float(xax3[tw3]))
+				tw3 += 1
+			regression3 = np.polyfit(flgrph3, fli3, 1)
+			slopeval3 = regression3[0]
+			bval3 = regression3[1]
+			
+			#graph3
+			otvals3 = []
+			uncery3 = []
+			cn3 = 0
+			while cn3 < len(xax3):
+				cm3 = (slopeval3 * xax3[cn3]) + bval3
+				otvals3.append(cm3)
+				cp3 = float(yax3[cn3]) - float(cm3)
+				uncery3.append(abs(cp3))
+				cn3 += 1
+			if worl == 'N':
+				plt.figure(3)
+				plt.plot(xax3, otvals3)
+				plt.plot(xax3, yax3, 'ro')
+				plt.show
+			else:
+				at3, bt3, mchi3, covar3 = linfit(flgrph3, fli3, uncery3)
+				wfvals3 = []
+				cq3 = 0
+				ervals3 = []
+				while cq3 < len(xax3):
+					cu3 = (bt3 * xax3[cq3]) + at3
+					wfvals3.append(cu3)
+					cb3 = float(yax3[cq3]) - float(cu3)
+					ervals3.append(abs(cb3))
+					cq3 += 1
+				vartester3 = np.power(covar3[1][1],.5)
+				plt.figure(3)
+				plt.plot(xax3, wfvals3)
+				plt.plot(xax3, yax3, 'ro')
+				plt.show()
+			
+			#figure4
+			fli4 = []
+			flgrph4 = []
+			tt4 = 0
+			tw4 = 0
+			while tt4 < len(yax4):
+				fli4.append(float(yax4[tt4]))
+				tt4 += 1
+			while tw4 < len(xax4):
+				flgrph4.append(float(xax4[tw4]))
+				tw4 += 1
+			regression4 = np.polyfit(flgrph4, fli4, 1)
+			slopeval4 = regression4[0]
+			bval4 = regression4[1]
+			
+			#graph4
+			otvals4 = []
+			uncery4 = []
+			cn4 = 0
+			while cn4 < len(xax4):
+				cm4 = (slopeval4 * xax4[cn4]) + bval4
+				otvals4.append(cm4)
+				cp4 = float(yax4[cn4]) - float(cm4)
+				uncery4.append(abs(cp4))
+				cn4 += 1
+			if worl == 'N':
+				plt.figure(4)
+				plt.plot(xax4, otvals4)
+				plt.plot(xax4, yax4, 'ro')
+				plt.show()
+			else:
+				at4, bt4, mchi4, covar4 = linfit(flgrph4, fli4, uncery4)
+				wfvals4 = []
+				ervals4 = []
+				cq4 = 0
+				while cq4 < len(xax4):
+					cu4 = (bt4 * xax4[cq4]) + at4
+					wfvals4.append(cu4)
+					cb4 = float(yax4[cq4]) - float(cu4)
+					ervals4.append(abs(cb4))
+					cq4 += 1
+				vartester4 = np.power(covar4[1][1],.5)
+				plt.figure(4)
+				plt.plot(xax4, wfvals4)
+				plt.plot(xax4, yax4, 'ro')
+				plt.show()
+			if worl == 'N':
+				print('The linear equation for figure 1 is:\n y = ' + str(slopeval) + 'x +' + str(bval))
+				print('The linear equation for figure 2 is:\n y = ' + str(slopeval2) + 'x +' + str(bval2))
+				print('The linear equation for figure 3 is:\n y = ' + str(slopeval3) + 'x +' + str(bval3))
+				print('The linear equation for figure 4 is:\n y = ' + str(slopeval4) + 'x +' + str(bval4))
+			
+				print('\nSlope comparison:\n Figure 1 ' + str(slopeval) + '\n Figure 2 ' + str(slopeval2) + '\n Figure 3 ' + str(slopeval3) + '\n Figure 4 ' + str(slopeval4))
+				print('Standard Errors:\n Figure 1 ' + str(stanerr(uncery)) + '\n Figure 2 ' + str(stanerr(uncery2)) + '\n Figure 3 ' + str(stanerr(uncery3)) + '\n Figure 4 ' + str(stanerr(uncery4)))
+
+			else:
+				print('The linear equation for figure 1 is:\n y = ' + str(bt) + 'x +' + str(at))
+				print('The linear equation for figure 2 is:\n y = ' + str(bt2) + 'x +' + str(at2))
+				print('The linear equation for figure 3 is:\n y = ' + str(bt3) + 'x +' + str(at3))
+				print('The linear equation for figure 4 is:\n y = ' + str(bt4) + 'x +' + str(at4))
+			
+				print('\nSlope comparison:\n Figure 1 ' + str(bt) + '\n Figure 2 ' + str(bt2) + '\n Figure 3 ' + str(bt3) + '\n Figure 4 ' + str(bt4))
+				
+				print('Standard Errors:\n Figure 1 ' + str(stanerr(ervals)) + '\n Figure 2 ' + str(stanerr(ervals2)) + '\n Figure 3 ' + str(stanerr(ervals3)) + '\n Figure 4 ' + str(stanerr(ervals4)))
+			return (vartester,vartester2,vartester3,vartester4, worl)
+
+def linregf(xax, yax, xax2, yax2, xax3, yax3, xax4, yax4):			
+			worl = 'Y'
+			#figure1
+			fli = []
+			flgrph = []
+			tt = 0
+			tw = 0
+			while tt < len(yax):
+				fli.append(float(yax[tt]))
+				tt += 1
+			while tw < len(xax):
+				flgrph.append(float(xax[tw]))
+				tw += 1
+			regression = np.polyfit(flgrph, fli, 1)
+			slopeval = regression[0]
+			bval = regression[1]
+			
+			#graph
+			otvals = []
+			uncery = []
+			cn = 0
+			while cn < len(xax):
+				cm = (slopeval * xax[cn]) + bval
+				otvals.append(cm)
+				cp = float(yax[cn]) - float(cm)
+				uncery.append(abs(cp))
+				cn += 1
+			if worl == 'N':
+				print('error of N')
+				
+			else:
+				at, bt, mchi, covar = linfit(flgrph, fli, uncery)
+				wfvals = []
+				cq = 0
+				ervals = []
+				while cq < len(xax):
+					cu = (bt * xax[cq]) + at
+					wfvals.append(cu)
+					cb = float(yax[cq]) - float(cu)
+					ervals.append(abs(cb))
+					cq += 1
+				vartester = np.power(covar[1][1],.5)
+				
+				
+			
+			#figure2
+			fli2 = []
+			flgrph2 = []
+			tt2 = 0
+			tw2 = 0
+			while tt2 < len(yax2):
+				fli2.append(float(yax2[tt2]))
+				tt2 += 1
+			while tw2 < len(xax2):
+				flgrph2.append(float(xax2[tw2]))
+				tw2 += 1
+			regression2 = np.polyfit(flgrph2, fli2, 1)
+			slopeval2 = regression2[0]
+			bval2 = regression2[1]
+			#graph
+			otvals2 = []
+			uncery2 = []
+			cn2 = 0
+			while cn2 < len(xax2):
+				cm2 = (slopeval2 * xax2[cn2]) + bval2
+				otvals2.append(cm2)
+				cp2 = float(yax2[cn2]) - float(cm2)
+				uncery2.append(abs(cp2))
+				cn2 += 1
+			if worl == 'N':
+				print('error of N')
+				
+			else:
+				at2, bt2, mchi2, covar2 = linfit(flgrph2, fli2, uncery2)
+				wfvals2 = []
+				cq2 = 0
+				ervals2 = []
+				while cq2 < len(xax2):
+					cu2 = (bt2 * xax2[cq2]) + at2
+					wfvals2.append(cu2)
+					cb2 = float(yax2[cq2]) - float(cu2)
+					ervals2.append(abs(cb2))
+					cq2 += 1
+				vartester2 = np.power(covar2[1][1],.5)
+				
+				
+			
+			#figure3
+			fli3 = []
+			flgrph3 = []
+			tt3 = 0
+			tw3 = 0
+			while tt3 < len(yax3):
+				fli3.append(float(yax3[tt3]))
+				tt3 += 1
+			while tw3 < len(xax3):
+				flgrph3.append(float(xax3[tw3]))
+				tw3 += 1
+			regression3 = np.polyfit(flgrph3, fli3, 1)
+			slopeval3 = regression3[0]
+			bval3 = regression3[1]
+			
+			#graph3
+			otvals3 = []
+			uncery3 = []
+			cn3 = 0
+			while cn3 < len(xax3):
+				cm3 = (slopeval3 * xax3[cn3]) + bval3
+				otvals3.append(cm3)
+				cp3 = float(yax3[cn3]) - float(cm3)
+				uncery3.append(abs(cp3))
+				cn3 += 1
+			if worl == 'N':
+				print('error of N')
+				
+			else:
+				at3, bt3, mchi3, covar3 = linfit(flgrph3, fli3, uncery3)
+				wfvals3 = []
+				cq3 = 0
+				ervals3 = []
+				while cq3 < len(xax3):
+					cu3 = (bt3 * xax3[cq3]) + at3
+					wfvals3.append(cu3)
+					cb3 = float(yax3[cq3]) - float(cu3)
+					ervals3.append(abs(cb3))
+					cq3 += 1
+				vartester3 = np.power(covar3[1][1],.5)
+				
+				
+			
+			#figure4
+			fli4 = []
+			flgrph4 = []
+			tt4 = 0
+			tw4 = 0
+			while tt4 < len(yax4):
+				fli4.append(float(yax4[tt4]))
+				tt4 += 1
+			while tw4 < len(xax4):
+				flgrph4.append(float(xax4[tw4]))
+				tw4 += 1
+			regression4 = np.polyfit(flgrph4, fli4, 1)
+			slopeval4 = regression4[0]
+			bval4 = regression4[1]
+			
+			#graph4
+			otvals4 = []
+			uncery4 = []
+			cn4 = 0
+			while cn4 < len(xax4):
+				cm4 = (slopeval4 * xax4[cn4]) + bval4
+				otvals4.append(cm4)
+				cp4 = float(yax4[cn4]) - float(cm4)
+				uncery4.append(abs(cp4))
+				cn4 += 1
+			if worl == 'N':
+				print('error of N')
+				
+			else:
+				at4, bt4, mchi4, covar4 = linfit(flgrph4, fli4, uncery4)
+				wfvals4 = []
+				ervals4 = []
+				cq4 = 0
+				while cq4 < len(xax4):
+					cu4 = (bt4 * xax4[cq4]) + at4
+					wfvals4.append(cu4)
+					cb4 = float(yax4[cq4]) - float(cu4)
+					ervals4.append(abs(cb4))
+					cq4 += 1
+				vartester4 = np.power(covar4[1][1],.5)
+				
+				
+			return (vartester,vartester2,vartester3,vartester4, bt, bt2, bt3, bt4)
+
+
+def list_creator(filename):
+	vtograph = raw_input('Please enter the variable you would like to graph versus time in all lowercase:\n')
+	dates = []
+	dates1 = []; dates2= []; dates3 = []; dates4 = []
+	#variables for qso 1
+	idd = []; ra = []; dec = []; g = []; dg = []; r = []; dr = []
+	i = []; di = []; z = []; dz = []; y = []; dy = []; j = []; dj = []
+	h = []; dh = []; radius = [];
+	
+	#variables for qso 2
+	id2 = []; ra2 = []; dec2 = []; g2 = []; dg2 = []; r2 = []; dr2 = []
+	i2 = []; di2 = []; z2 = []; dz2 = []; y2 = []; dy2 = []; j2 = []; dj2 = []
+	h2 = []; dh2 = []; radius2 = [];
+	
+	#variables for qso 3
+	id3 = []; ra3 = []; dec3 = []; g3 = []; dg3 = []; r3 = []; dr3 = []
+	i3 = []; di3 = []; z3 = []; dz3 = []; y3 = []; dy3 = []; j3 = []; dj3 = []
+	h3 = []; dh3 = []; radius3 = [];
+	
+	#variables for qso 4
+	id4 = []; ra4 = []; dec4 = []; g4 = []; dg4 = []; r4 = []; dr4 = []
+	i4 = []; di4 = []; z4 = []; dz4 = []; y4 = []; dy4 = []; j4 = []; dj4 = []
+	h4 = []; dh4 = []; radius4 = [];
+	
+	
+	#assigns values to variables
+	a = 0
+	infile = open(filename)
+	for line in infile:
+		if line.startswith('#'):
+			continue
+		if line.startswith('20'):
+			line = line.strip( )
+			dates.append(line)
+			a +=1
+			continue
+		line = line.strip( )
+		valr = line.split(' ')
+		lvalr = len(valr)
+		if lvalr == 28:
+			ba, bb, dump1, bc, dump2, bd, be, bf, bg, bh, bi, bj, bk, bl, bm, bn, bo, bp, bq, dump3, dump4, dump5, br, dump6, dump7, dump8, dump9, dump0 = line.split(' ')
+			aa = Decimal(ba); ab = Decimal(bb); ac = Decimal(bc); ad = Decimal(bd); ae = Decimal(be); af = Decimal(bf)
+			ag = Decimal(bg); ah = Decimal(bh); ai = Decimal(bi); aj = Decimal(bj); ak = Decimal(bk); al = Decimal(bl)
+			am = Decimal(bm); an = Decimal(bn); ao = Decimal(bo); ap = Decimal(bp); aq = Decimal(bq); ar = Decimal(br)
+			
+			if ab > 322.238 and ab < 322.239 and ac < -6.294 and ac > -6.296:
+				idd.append(aa); ra.append(ab); dec.append(ac); g.append(ad); dg.append(ae); r.append(af); dr.append(ag)
+				i.append(ah); di.append(ai); z.append(aj); dz.append(ak); y.append(al); dy.append(am); j.append(an)
+				dj.append(ao); h.append(ap); dh.append(aq); radius.append(ar)
+				dates1.append(dates[a-1])
+			elif ab > 322.2385 and ab < 322.2395 and ac <  -6.297 and ac > -6.2985:
+				id2.append(aa); ra2.append(ab); dec2.append(ac); g2.append(ad); dg2.append(ae); r2.append(af); dr2.append(ag)
+				i2.append(ah); di2.append(ai); z2.append(aj); dz2.append(ak); y2.append(al); dy2.append(am); j2.append(an)
+				dj2.append(ao); h2.append(ap); dh2.append(aq); radius2.append(ar)
+				dates2.append(dates[a-1])
+			elif ab > 322.2385 and ab < 322.2395 and ac < -6.2985 and ac > -6.3:
+				id3.append(aa); ra3.append(ab); dec3.append(ac); g3.append(ad); dg3.append(ae); r3.append(af); dr3.append(ag)
+				i3.append(ah); di3.append(ai); z3.append(aj); dz3.append(ak); y3.append(al); dy3.append(am); j3.append(an)
+				dj3.append(ao); h3.append(ap); dh3.append(aq); radius3.append(ar)
+				dates3.append(dates[a-1])
+			elif ab > 322.24 and ab < 322.241 and ac < -6.298 and ac > -6.3:
+				id4.append(aa); ra4.append(ab); dec4.append(ac); g4.append(ad); dg4.append(ae); r4.append(af); dr4.append(ag)
+				i4.append(ah); di4.append(ai); z4.append(aj); dz4.append(ak); y4.append(al); dy4.append(am); j4.append(an)
+				dj4.append(ao); h4.append(ap); dh4.append(aq); radius4.append(ar)
+				dates4.append(dates[a-1])
+			else:
+				print('There was something outside the bounds')
+		elif lvalr == 27:
+			ba, bb, dump1, bc, dump2, bd, be, bf, bg, bh, bi, bj, bk, bl, bm, bn, bo, bp, bq, dump3, dump4, dump5, br, dump6, dump7, dump8, dump9 = line.split(' ')
+			aa = Decimal(ba); ab = Decimal(bb); ac = Decimal(bc); ad = Decimal(bd); ae = Decimal(be); af = Decimal(bf)
+			ag = Decimal(bg); ah = Decimal(bh); ai = Decimal(bi); aj = Decimal(bj); ak = Decimal(bk); al = Decimal(bl)
+			am = Decimal(bm); an = Decimal(bn); ao = Decimal(bo); ap = Decimal(bp); aq = Decimal(bq); ar = Decimal(br)
+			
+			if ab > 322.238 and ab < 322.239 and ac < -6.294 and ac > -6.296:
+				idd.append(aa); ra.append(ab); dec.append(ac); g.append(ad); dg.append(ae); r.append(af); dr.append(ag)
+				i.append(ah); di.append(ai); z.append(aj); dz.append(ak); y.append(al); dy.append(am); j.append(an)
+				dj.append(ao); h.append(ap); dh.append(aq); radius.append(ar)
+				dates1.append(dates[a-1])
+			elif ab > 322.2385 and ab < 322.2395 and ac <  -6.297 and ac > -6.2985:
+				id2.append(aa); ra2.append(ab); dec2.append(ac); g2.append(ad); dg2.append(ae); r2.append(af); dr2.append(ag)
+				i2.append(ah); di2.append(ai); z2.append(aj); dz2.append(ak); y2.append(al); dy2.append(am); j2.append(an)
+				dj2.append(ao); h2.append(ap); dh2.append(aq); radius2.append(ar)
+				dates2.append(dates[a-1])
+			elif ab > 322.2385 and ab < 322.2395 and ac < -6.2985 and ac > -6.3:
+				id3.append(aa); ra3.append(ab); dec3.append(ac); g3.append(ad); dg3.append(ae); r3.append(af); dr3.append(ag)
+				i3.append(ah); di3.append(ai); z3.append(aj); dz3.append(ak); y3.append(al); dy3.append(am); j3.append(an)
+				dj3.append(ao); h3.append(ap); dh3.append(aq); radius3.append(ar)
+				dates3.append(dates[a-1])
+			elif ab > 322.24 and ab < 322.241 and ac < -6.298 and ac > -6.3:
+				id4.append(aa); ra4.append(ab); dec4.append(ac); g4.append(ad); dg4.append(ae); r4.append(af); dr4.append(ag)
+				i4.append(ah); di4.append(ai); z4.append(aj); dz4.append(ak); y4.append(al); dy4.append(am); j4.append(an)
+				dj4.append(ao); h4.append(ap); dh4.append(aq); radius4.append(ar)
+				dates4.append(dates[a-1])
+			else:
+				print('There was something outside the bounds')
+				
+	
+	#makes the date into days and adds them to a qso specific list
+	v = 0
+	graphdates1 = []
+	while v < len(dates1):
+		holderdate = dates1[v]
+		days = 30 * int(holderdate[4:6]) #approximation
+		days = days + int(holderdate[6:9])
+		graphdates1.append(days)
+		v += 1
+	va = 0
+	graphdates2 = []
+	while va < len(dates2):
+		holderdate = dates2[va]
+		days = 30 * int(holderdate[4:6]) #approximation
+		days = days + int(holderdate[6:9])
+		graphdates2.append(days)
+		va += 1	
+	vb = 0
+	graphdates3 = []
+	while vb < len(dates3):
+		holderdate = dates3[vb]
+		days = 30 * int(holderdate[4:6]) #approximation
+		days = days + int(holderdate[6:9])
+		graphdates3.append(days)
+		vb += 1
+	vc = 0
+	graphdates4 = []
+	while vc < len(dates4):
+		holderdate = dates4[vc]
+		days = 30 * int(holderdate[4:6]) #approximation
+		days = days + int(holderdate[6:9])
+		graphdates4.append(days)
+		vc += 1
+	#actual graphing
+	if vtograph == 'id':
+		plt.figure(1)
+		plt.plot(graphdates1, idd, 'ro')
+		plt.show()
+		
+		plt.figure(2)
+		plt.plot(graphdates2, id2, 'ro')
+		plt.show()
+		
+		plt.figure(3)
+		plt.plot(graphdates3, id3, 'ro')
+		plt.show()
+		
+		plt.figure(4)
+		plt.plot(graphdates4, id4, 'ro')
+		plt.show()
+		
+		regrcheck = raw_input('Would you like to make a linear regression? (Y/N)\n')
+		
+		if regrcheck == 'Y':
+			linreg(graphdates1, idd, graphdates2, id2, graphdates3, id3, graphdates4, id4)
+	elif vtograph == 'ra':
+		plt.figure(1)
+		plt.plot(graphdates1, ra, 'ro')
+		plt.show()
+		
+		
+		plt.figure(2)
+		plt.plot(graphdates2, ra2, 'ro')
+		plt.show()
+		
+		plt.figure(3)
+		plt.plot(graphdates3, ra3, 'ro')
+		plt.show()
+		
+		plt.figure(4)
+		plt.plot(graphdates4, ra4, 'ro')
+		plt.show()
+		
+		regrcheck = raw_input('Would you like to make a linear regression? (Y/N)\n')
+		
+		if regrcheck == 'Y':
+			linreg(graphdates1, ra, graphdates2, ra2, graphdates3, ra3, graphdates4, ra4)
+	elif vtograph == 'dec':
+		plt.figure(1)
+		plt.plot(graphdates1, dec, 'ro')
+		plt.show()
+		
+		
+		plt.figure(2)
+		plt.plot(graphdates2, dec2, 'ro')
+		plt.show()
+		
+		plt.figure(3)
+		plt.plot(graphdates3, dec3, 'ro')
+		plt.show()
+		
+		plt.figure(4)
+		plt.plot(graphdates4, dec4, 'ro')
+		plt.show()
+		
+		regrcheck = raw_input('Would you like to make a linear regression? (Y/N)\n')
+		
+		if regrcheck == 'Y':
+			linreg(graphdates1, dec, graphdates2, dec2, graphdates3, dec3, graphdates4, dec4)
+	elif vtograph == 'g':
+		plt.figure(1)
+		plt.plot(graphdates1, g, 'ro')
+		plt.show()
+		
+		
+		plt.figure(2)
+		plt.plot(graphdates2, g2, 'ro')
+		plt.show()
+		
+		plt.figure(3)
+		plt.plot(graphdates3, g3, 'ro')
+		plt.show()
+		
+		plt.figure(4)
+		plt.plot(graphdates4, g4, 'ro')
+		plt.show()
+		
+		regrcheck = raw_input('Would you like to make a linear regression? (Y/N)\n')
+		
+		if regrcheck == 'Y':
+			vartg, vartg2, vartg3, vartg4, wchecker = linreg(graphdates1, g, graphdates2, g2, graphdates3, g3, graphdates4, g4)
+	elif vtograph == 'dg':
+		plt.figure(1)
+		plt.plot(graphdates1, dg, 'ro')
+		plt.show()
+		
+		
+		plt.figure(2)
+		plt.plot(graphdates2, dg2, 'ro')
+		plt.show()
+		
+		plt.figure(3)
+		plt.plot(graphdates3, dg3, 'ro')
+		plt.show()
+		
+		plt.figure(4)
+		plt.plot(graphdates4, dg4, 'ro')
+		plt.show()
+		
+		regrcheck = raw_input('Would you like to make a linear regression? (Y/N)\n')
+		
+		if regrcheck == 'Y':
+			linreg(graphdates1, dg, graphdates2, dg2, graphdates3, dg3, graphdates4, dg4)
+	elif vtograph == 'r':
+		plt.figure(1)
+		plt.plot(graphdates1, r, 'ro')
+		plt.show()
+		
+		
+		plt.figure(2)
+		plt.plot(graphdates2, r2, 'ro')
+		plt.show()
+		
+		plt.figure(3)
+		plt.plot(graphdates3, r3, 'ro')
+		plt.show()
+		
+		plt.figure(4)
+		plt.plot(graphdates4, r4, 'ro')
+		plt.show()
+		
+		regrcheck = raw_input('Would you like to make a linear regression? (Y/N)\n')
+		
+		if regrcheck == 'Y':
+			vartr, vartr2, vartr3, vartr4, wchecker = linreg(graphdates1, r, graphdates2, r2, graphdates3, r3, graphdates4, r4)
+	elif vtograph == 'dr':
+		plt.figure(1)
+		plt.plot(graphdates1, dr, 'ro')
+		plt.show()
+		
+		
+		plt.figure(2)
+		plt.plot(graphdates2, dr2, 'ro')
+		plt.show()
+		
+		plt.figure(3)
+		plt.plot(graphdates3, dr3, 'ro')
+		plt.show()
+		
+		plt.figure(4)
+		plt.plot(graphdates4, dr4, 'ro')
+		plt.show()
+		
+		regrcheck = raw_input('Would you like to make a linear regression? (Y/N)\n')
+		
+		if regrcheck == 'Y':
+			linreg(graphdates1, dr, graphdates2, dr2, graphdates3, dr3, graphdates4, dr4)
+	elif vtograph == 'i':
+		plt.figure(1)
+		plt.plot(graphdates1, i, 'ro')
+		plt.show()
+		
+		
+		plt.figure(2)
+		plt.plot(graphdates2, i2, 'ro')
+		plt.show()
+		
+		plt.figure(3)
+		plt.plot(graphdates3, i3, 'ro')
+		plt.show()
+		
+		plt.figure(4)
+		plt.plot(graphdates4, i4, 'ro')
+		plt.show()
+		
+		regrcheck = raw_input('Would you like to make a linear regression? (Y/N)\n')
+		
+		if regrcheck == 'Y':
+			varti, varti2, varti3, varti4, wchecker = linreg(graphdates1, i, graphdates2, i2, graphdates3, i3, graphdates4, i4)
+			#fli = []
+			#flgrph = []
+			#tt = 0
+			#tw = 0
+			#while tt < len(i):
+				#fli.append(float(i[tt]))
+				#tt += 1
+			#while tw < len(graphdates1):
+				#flgrph.append(float(graphdates1[tw]))
+				#tw += 1
+			#regression = np.polyfit(flgrph, fli, 1)
+			#print regression
+				
+			
+			##figure1
+			## Basic computations to save a little time.
+			#length = len(i)
+			#sum_x = sum(i)
+			#sum_y = sum(graphdates1)
+			
+			#sum_x_squared = sum(map(lambda a: a * a, i))
+			#sum_of_products = sum([i[p] * graphdates1[p] for p in range(length)])
+
+			##formula  
+			#slopeval = (sum_of_products - (sum_x * sum_y) / length) / (sum_x_squared - ((sum_x ** 2) / length))
+			#bval = graphdates1[0] - (slopeval * i[0])
+			
+			##figure2
+			#length = len(i2)
+			#sum_x = sum(i2)
+			#sum_y = sum(graphdates2)
+			
+			#sum_x_squared = sum(map(lambda a: a * a, i2))
+			#sum_of_products = sum([i2[p] * graphdates2[p] for p in range(length)])
+  
+			#slopeval2 = (sum_of_products - (sum_x * sum_y) / length) / (sum_x_squared - ((sum_x ** 2) / length))
+			#bval2 = graphdates2[0] - (slopeval2 * i2[0])
+			
+			##figure3
+			#length = len(i3)
+			#sum_x = sum(i3)
+			#sum_y = sum(graphdates3)
+			
+			#sum_x_squared = sum(map(lambda a: a * a, i3))
+			#sum_of_products = sum([i3[p] * graphdates3[p] for p in range(length)])
+ 
+			#slopeval3 = (sum_of_products - (sum_x * sum_y) / length) / (sum_x_squared - ((sum_x ** 2) / length))
+			#bval3 = graphdates3[0] - (slopeval3 * i3[0])
+			
+			##figure4
+			#length = len(i4)
+			#sum_x = sum(i4)
+			#sum_y = sum(graphdates4)
+			
+			#sum_x_squared = sum(map(lambda a: a * a, i4))
+			#sum_of_products = sum([i4[p] * graphdates4[p] for p in range(length)])
+ 
+			#slopeval4 = (sum_of_products - (sum_x * sum_y) / length) / (sum_x_squared - ((sum_x ** 2) / length))
+			#bval4 = graphdates4[0] - (slopeval4 * i4[0])
+    
+			
+			#print('The linear equation for figure 1 is:\n y = ' + str(slopeval) + 'x +' + str(bval))
+			#print('The linear equation for figure 2 is:\n y = ' + str(slopeval2) + 'x +' + str(bval2))
+			#print('The linear equation for figure 3 is:\n y = ' + str(slopeval3) + 'x +' + str(bval3))
+			#print('The linear equation for figure 4 is:\n y = ' + str(slopeval4) + 'x +' + str(bval4))
+			
+			#print('\nSlope comparison:\n Figure 1 ' + str(slopeval) + '\n Figure 2 ' + str(slopeval2) + '\n Figure 3 ' + str(slopeval3) + '\n Figure 4 ' + str(slopeval4))
+			
+	elif vtograph == 'di':
+		plt.figure(1)
+		plt.plot(graphdates1, di, 'ro')
+		plt.show()
+		
+		
+		plt.figure(2)
+		plt.plot(graphdates2, di2, 'ro')
+		plt.show()
+		
+		plt.figure(3)
+		plt.plot(graphdates3, di3, 'ro')
+		plt.show()
+		
+		plt.figure(4)
+		plt.plot(graphdates4, di4, 'ro')
+		plt.show()
+		
+		regrcheck = raw_input('Would you like to make a linear regression? (Y/N)\n')
+		
+		if regrcheck == 'Y':
+			linreg(graphdates1, di, graphdates2, di2, graphdates3, di3, graphdates4, di4)
+	elif vtograph == 'z':
+		plt.figure(1)
+		plt.plot(graphdates1, z, 'ro')
+		plt.show()
+		
+		
+		plt.figure(2)
+		plt.plot(graphdates2, z2, 'ro')
+		plt.show()
+		
+		plt.figure(3)
+		plt.plot(graphdates3, z3, 'ro')
+		plt.show()
+		
+		plt.figure(4)
+		plt.plot(graphdates4, z4, 'ro')
+		plt.show()
+		
+		regrcheck = raw_input('Would you like to make a linear regression? (Y/N)\n')
+		
+		if regrcheck == 'Y':
+			vartz, vartz2, vartz3, vartz4, wchecker = linreg(graphdates1, z, graphdates2, z2, graphdates3, z3, graphdates4, z4)
+	elif vtograph == 'dz':
+		plt.figure(1)
+		plt.plot(graphdates1, dz, 'ro')
+		plt.show()
+		
+		
+		plt.figure(2)
+		plt.plot(graphdates2, dz2, 'ro')
+		plt.show()
+		
+		plt.figure(3)
+		plt.plot(graphdates3, dz3, 'ro')
+		plt.show()
+		
+		plt.figure(4)
+		plt.plot(graphdates4, dz4, 'ro')
+		plt.show()
+		
+		regrcheck = raw_input('Would you like to make a linear regression? (Y/N)\n')
+		
+		if regrcheck == 'Y':
+			linreg(graphdates1, dz, graphdates2, dz2, graphdates3, dz3, graphdates4, dz4)
+	elif vtograph == 'y':
+		plt.figure(1)
+		plt.plot(graphdates1, y, 'ro')
+		plt.show()
+		
+		
+		plt.figure(2)
+		plt.plot(graphdates2, y2, 'ro')
+		plt.show()
+		
+		plt.figure(3)
+		plt.plot(graphdates3, y3, 'ro')
+		plt.show()
+		
+		plt.figure(4)
+		plt.plot(graphdates4, y4, 'ro')
+		plt.show()
+		
+		regrcheck = raw_input('Would you like to make a linear regression? (Y/N)\n')
+		
+		if regrcheck == 'Y':
+			varty, varty2, varty3, varty4, wchecker = linreg(graphdates1, y, graphdates2, y2, graphdates3, y3, graphdates4, y4)
+	elif vtograph == 'dy':
+		plt.figure(1)
+		plt.plot(graphdates1, dy, 'ro')
+		plt.show()
+		
+		
+		plt.figure(2)
+		plt.plot(graphdates2, dy2, 'ro')
+		plt.show()
+		
+		plt.figure(3)
+		plt.plot(graphdates3, dy3, 'ro')
+		plt.show()
+		
+		plt.figure(4)
+		plt.plot(graphdates4, dy4, 'ro')
+		plt.show()
+		
+		regrcheck = raw_input('Would you like to make a linear regression? (Y/N)\n')
+		
+		if regrcheck == 'Y':
+			linreg(graphdates1, dy, graphdates2, dy2, graphdates3, dy3, graphdates4, dy4)
+	elif vtograph == 'j':
+		plt.figure(1)
+		plt.plot(graphdates1, j, 'ro')
+		plt.show()
+		
+		
+		plt.figure(2)
+		plt.plot(graphdates2, j2, 'ro')
+		plt.show()
+		
+		plt.figure(3)
+		plt.plot(graphdates3, j3, 'ro')
+		plt.show()
+		
+		plt.figure(4)
+		plt.plot(graphdates4, j4, 'ro')
+		plt.show()
+		
+		regrcheck = raw_input('Would you like to make a linear regression? (Y/N)\n')
+		
+		if regrcheck == 'Y':
+			vartj, vartj2, vartj3, vartj4, wchecker = linreg(graphdates1, j, graphdates2, j2, graphdates3, j3, graphdates4, j4)
+	elif vtograph == 'dj':
+		plt.figure(1)
+		plt.plot(graphdates1, dj, 'ro')
+		plt.show()
+		
+		
+		plt.figure(2)
+		plt.plot(graphdates2, dj2, 'ro')
+		plt.show()
+		
+		plt.figure(3)
+		plt.plot(graphdates3, dj3, 'ro')
+		plt.show()
+		
+		plt.figure(4)
+		plt.plot(graphdates4, dj4, 'ro')
+		plt.show()
+		
+		regrcheck = raw_input('Would you like to make a linear regression? (Y/N)\n')
+		
+		if regrcheck == 'Y':
+			linreg(graphdates1, dj, graphdates2, dj2, graphdates3, dj3, graphdates4, dj4)
+	elif vtograph == 'h':
+		plt.figure(1)
+		plt.plot(graphdates1, h, 'ro')
+		plt.show()
+		
+		
+		plt.figure(2)
+		plt.plot(graphdates2, h2, 'ro')
+		plt.show()
+		
+		plt.figure(3)
+		plt.plot(graphdates3, h3, 'ro')
+		plt.show()
+		
+		plt.figure(4)
+		plt.plot(graphdates4, h4, 'ro')
+		plt.show()
+		
+		regrcheck = raw_input('Would you like to make a linear regression? (Y/N)\n')
+		
+		if regrcheck == 'Y':
+			varth, varth2, varth3, varth4, wchecker = linreg(graphdates1, h, graphdates2, h2, graphdates3, h3, graphdates4, h4)
+	elif vtograph == 'dh':
+		plt.figure(1)
+		plt.plot(graphdates1, dh, 'ro')
+		plt.show()
+		
+		
+		plt.figure(2)
+		plt.plot(graphdates2, dh2, 'ro')
+		plt.show()
+		
+		plt.figure(3)
+		plt.plot(graphdates3, dh3, 'ro')
+		plt.show()
+		
+		plt.figure(4)
+		plt.plot(graphdates4, dh4, 'ro')
+		plt.show()
+		
+		regrcheck = raw_input('Would you like to make a linear regression? (Y/N)\n')
+		
+		if regrcheck == 'Y':
+			linreg(graphdates1, dh, graphdates2, dh2, graphdates3, dh3, graphdates4, dh4)
+	elif vtograph == 'radius':
+		plt.figure(1)
+		plt.plot(graphdates1, radius, 'ro')
+		plt.show()
+		
+		
+		plt.figure(2)
+		plt.plot(graphdates2, radius2, 'ro')
+		plt.show()
+		
+		plt.figure(3)
+		plt.plot(graphdates3, radius3, 'ro')
+		plt.show()
+		
+		plt.figure(4)
+		plt.plot(graphdates4, radius4, 'ro')
+		plt.show()
+		
+		regrcheck = raw_input('Would you like to make a linear regression? (Y/N)\n')
+		
+		if regrcheck == 'Y':
+			linreg(graphdates1, radius, graphdates2, radius2, graphdates3, radius3, graphdates4, radius4)
+	elif vtograph == 'check':
+		plt.figure(1)
+		plt.plot(ra, dec, 'ro')
+		plt.plot(ra2, dec2, 'bo')
+		plt.plot(ra3, dec3, 'yo')
+		plt.plot(ra4, dec4, 'go')
+		plt.show()
+	else: 
+		print('Please run again and enter the variable correctly')
+	ultichecker = raw_input('Would you like to see the weighted errors across all bands?(Y/N)\n')
+	if ultichecker == 'Y':
+		vartr, vartr2, vartr3, vartr4, slr, slr2, slr3, slr4 = linregf(graphdates1, r, graphdates2, r2, graphdates3, r3, graphdates4, r4)
+		varti, varti2, varti3, varti4, sli, sli2, sli3, sli4 = linregf(graphdates1, i, graphdates2, i2, graphdates3, i3, graphdates4, i4)
+		vartz, vartz2, vartz3, vartz4, slz, slz2, slz3, slz4 = linregf(graphdates1, z, graphdates2, z2, graphdates3, z3, graphdates4, z4)
+		varty, varty2, varty3, varty4, sly, sly2, sly3, sly4 = linregf(graphdates1, y, graphdates2, y2, graphdates3, y3, graphdates4, y4)
+		vartj, vartj2, vartj3, vartj4, slj, slj2, slj3, slj4 = linregf(graphdates1, j, graphdates2, j2, graphdates3, j3, graphdates4, j4)
+		varth, varth2, varth3, varth4, slh, slh2, slh3, slh4 = linregf(graphdates1, h, graphdates2, h2, graphdates3, h3, graphdates4, h4)
+		
+		qsoslope = [slr,sli,slz,sly,slj,slh]
+		qsoslope2 = [slr2,sli2,slz2,sly2,slj2,slh2]
+		qsoslope3 = [slr3,sli3,slz3,sly3,slj3,slh3]
+		qsoslope4 = [slr4,sli4,slz4,sly4,slj4,slh4]
+		qsoerr = [vartr,varti,vartz,varty,vartj,varth]
+		qsoerr2 = [vartr2,varti2,vartz2,varty2,vartj2,varth2]
+		qsoerr3 = [vartr3,varti3,vartz3,varty3,vartj3,varth3]
+		qsoerr4 = [vartr4,varti4,vartz4,varty4,vartj4,varth4]
+		
+		erplotter(qsoslope, qsoslope2, qsoslope3, qsoslope4, qsoerr, qsoerr2, qsoerr3, qsoerr4)
+		
+list_creator('/home/massimo/Desktop/data.txt')
